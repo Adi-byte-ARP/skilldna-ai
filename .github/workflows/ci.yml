@@ -12,9 +12,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
       - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
@@ -22,7 +24,7 @@ jobs:
       - name: Run backend tests
         working-directory: backend
         run: |
-          pytest -q tests
+          python -m pytest -q tests
 
   frontend:
     runs-on: ubuntu-latest
@@ -31,7 +33,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - name: Install frontend dependencies
         working-directory: frontend
         run: |
@@ -39,4 +43,5 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: |
+          npm run lint
           npm run build
