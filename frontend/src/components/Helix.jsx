@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useCallback } from "react";
 import { gsap } from "../lib/gsapSetup";
 
 /**
@@ -38,7 +38,7 @@ export default function Helix({
   const rungRefs = useRef([]);
   const phaseRef = useRef(0);
 
-  const computeStrand = (phaseOffset, globalPhase) => {
+  const computeStrand = useCallback((phaseOffset, globalPhase) => {
     const samples = 80;
     const pts = [];
     for (let i = 0; i <= samples; i++) {
@@ -48,7 +48,7 @@ export default function Helix({
       pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
     }
     return "M " + pts.join(" L ");
-  };
+  }, [amplitude, centerX, height]);
 
   const rungGeometry = useMemo(() => {
     const arr = [];
@@ -62,8 +62,8 @@ export default function Helix({
     return arr;
   }, [rungCount, skills, variant]);
 
-  const initialLeftPath = useMemo(() => computeStrand(0, 0), [width, height, rungCount]);
-  const initialRightPath = useMemo(() => computeStrand(Math.PI, 0), [width, height, rungCount]);
+  const initialLeftPath = useMemo(() => computeStrand(0, 0), [computeStrand]);
+  const initialRightPath = useMemo(() => computeStrand(Math.PI, 0), [computeStrand]);
 
   useEffect(() => {
     if (!spin) return;
@@ -103,7 +103,7 @@ export default function Helix({
 
     gsap.ticker.add(tick);
     return () => gsap.ticker.remove(tick);
-  }, [spin, speed, rungGeometry, width, height]);
+  }, [amplitude, centerX, computeStrand, height, rungGeometry, speed, spin]);
 
   const staticRungs = useMemo(() => {
     return rungGeometry.map((r) => {
@@ -116,7 +116,7 @@ export default function Helix({
         xRight: centerX + amplitude * Math.sin(phase + Math.PI),
       };
     });
-  }, [rungGeometry, height, width]);
+  }, [amplitude, centerX, height, rungGeometry]);
 
   return (
     <svg

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { api } from "../lib/api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import UploadCard from "../components/UploadCard";
 import ReportPanel from "../components/ReportPanel";
 
@@ -29,7 +29,7 @@ export default function Dashboard() {
       const r = await api.getReport(userId);
       setReport(r);
       setApiOffline(false);
-    } catch (e) {
+    } catch {
       setApiOffline(true);
     } finally {
       setReportLoading(false);

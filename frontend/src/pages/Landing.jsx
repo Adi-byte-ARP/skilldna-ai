@@ -1,6 +1,6 @@
 import { useRef, useLayoutEffect } from "react";
 import { Link } from "react-router-dom";
-import { gsap, ScrollTrigger } from "../lib/gsapSetup";
+import { gsap } from "../lib/gsapSetup";
 import Helix from "../components/Helix";
 import SequenceBackground from "../components/SequenceBackground";
 

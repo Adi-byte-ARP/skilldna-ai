@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "../lib/gsapSetup";
 import Helix from "../components/Helix";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 
 export default function Login() {
   const [mode, setMode] = useState("login"); // "login" | "register"

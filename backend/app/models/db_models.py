@@ -9,12 +9,16 @@ coding-profile, LinkedIn, and certificate data into one composite
 assessment" per the synopsis, without hardcoding per-source logic into
 the scorer.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 class User(Base):
@@ -24,7 +28,7 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=True)  # nullable for pre-auth rows created before this column existed
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     submissions = relationship("Submission", back_populates="user", cascade="all, delete-orphan")
     scores = relationship("SkillScore", back_populates="user", cascade="all, delete-orphan")
@@ -42,7 +46,7 @@ class Submission(Base):
     raw_text = Column(Text, nullable=True)  # extracted text (OCR/pdf/API dump)
     status = Column(String, default="pending")  # pending | processed | failed
     error_message = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     user = relationship("User", back_populates="submissions")
     extracted_skills = relationship("ExtractedSkill", back_populates="submission", cascade="all, delete-orphan")
@@ -76,6 +80,6 @@ class SkillScore(Base):
     category = Column(String, nullable=True)
     score = Column(Float, nullable=False)  # 0-100
     sources = Column(JSON, nullable=True)  # list of source_types that contributed
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     user = relationship("User", back_populates="scores")
