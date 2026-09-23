@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #F6F7F4;
+  --color-paper-dim: #ECEEE8;
+  --color-ink: #10151A;
+  --color-ink-soft: #4A5158;
+  --color-line: #D8DBD3;
+
+  --color-helix-teal: #0F9E8E;
+  --color-helix-teal-soft: #CFEDE8;
+  --color-helix-violet: #6C5CE0;
+  --color-helix-violet-soft: #E3E0FA;
+  --color-signal-coral: #E85D4C;
+  --color-signal-coral-soft: #FBE2DE;
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: var(--color-helix-teal);
+  color: var(--color-paper);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-helix-teal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }
+
+.grain {
+  background-image: radial-gradient(circle at 1px 1px, rgba(16,21,26,0.04) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+@keyframes flowDash {
+  to { stroke-dashoffset: -240; }
+}
+@keyframes nodePulse {
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.22); }
+}
+@keyframes rungSpark {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}

@@ -1,0 +1,35 @@
+# One command to run the whole thing on any machine with Docker installed:
+#   docker compose up --build
+# Tesseract OCR is baked into the backend image (see backend/Dockerfile),
+# so there is nothing else to install -- this is the point of this file.
+#
+# Frontend: http://localhost:5173
+# Backend:  http://localhost:8000  (docs at /docs)
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/data/skilldna.db
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-me-in-production}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - CORS_ORIGINS=http://localhost:5173
+    volumes:
+      - skilldna-data:/app/data
+      - skilldna-uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  skilldna-data:
+  skilldna-uploads:

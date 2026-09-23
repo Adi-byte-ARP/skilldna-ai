@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+venv/
+skilldna.db
+uploads/*
+!uploads/.gitkeep
+.env
