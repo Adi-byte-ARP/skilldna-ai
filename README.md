@@ -4,6 +4,8 @@ SkillDNA AI is an evidence-based career skill assessment platform that evaluates
 
 [![CI](https://github.com/Adi-byte-ARP/skilldna-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Adi-byte-ARP/skilldna-ai/actions/workflows/ci.yml)
 
+[Open the live frontend](https://adi-byte-arp.github.io/skilldna-ai/)
+
 Project Synopsis 22UIS717P — Basaveshwar Engineering College Bagalkote, Department of Information Science & Engineering.
 
 ## Overview
@@ -141,6 +143,7 @@ npm run dev -- --host 0.0.0.0
 ### 4) Open the app
 
 Visit:
+- Live frontend: https://adi-byte-arp.github.io/skilldna-ai/
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:8000
 - Docs: http://localhost:8000/docs
