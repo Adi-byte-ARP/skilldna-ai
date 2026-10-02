@@ -8,6 +8,8 @@ SkillDNA AI is an evidence-based career skill assessment platform that evaluates
 
 Project Synopsis 22UIS717P — Basaveshwar Engineering College Bagalkote, Department of Information Science & Engineering.
 
+Live deployment refreshed on 2026-10-02.
+
 ## Overview
 
 Most career tools rely on what a candidate writes on a resume. SkillDNA AI challenges that by verifying whether the claimed skills are actually supported by evidence from real sources.
