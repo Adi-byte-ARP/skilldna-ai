@@ -200,7 +200,7 @@ docker compose up --build
 ```
 
 Then open:
-- http://localhost:5173
+- http://localhost:5173/
 
 This is useful for a consistent environment and for deployment-friendly setup.
 
