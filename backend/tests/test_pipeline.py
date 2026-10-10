@@ -13,6 +13,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import Base
 from app.models.db_models import User, Submission, ExtractedSkill
+from app.services.github_analyzer import normalize_username
 from app.services.resume_parser import extract_skills_from_text, parse_resume
 from app.services.scoring_engine import build_report
 
@@ -57,6 +58,14 @@ def test_parse_resume_pdf(tmp_path):
     assert len(result["raw_text"]) > 0
     assert len(result["skills"]) > 0
     print(f"\nPDF parse found {len(result['skills'])} skills")
+
+
+def test_normalize_username_accepts_url_variants():
+    assert normalize_username("adi-byte-arp") == "adi-byte-arp"
+    assert normalize_username("@adi-byte-arp") == "adi-byte-arp"
+    assert normalize_username("https://github.com/Adi-byte-ARP") == "Adi-byte-ARP"
+    assert normalize_username("github.com/Adi-byte-ARP/") == "Adi-byte-ARP"
+    assert normalize_username("https://github.com/Adi-byte-ARP?tab=repositories") == "Adi-byte-ARP"
 
 
 def test_full_pipeline_with_db(tmp_path):

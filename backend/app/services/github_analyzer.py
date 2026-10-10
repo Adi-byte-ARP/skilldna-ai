@@ -30,16 +30,22 @@ def normalize_username(raw: str) -> str:
     combination with stray whitespace/slashes, and returns just the
     username GitHub's API expects. People paste URLs far more often than
     bare usernames, so this needs to be forgiving."""
-    value = raw.strip()
-    # strip repeatedly in case of "@" + URL combos, then take the first
-    # path segment left over
+    value = (raw or "").strip()
+    if not value:
+        return ""
+
+    # Remove common wrappers such as @username, https://github.com/owner,
+    # github.com/owner, or trailing slashes/queries before extracting the
+    # account name itself.
+    value = value.replace("\\", "/")
     while True:
         new_value = USERNAME_JUNK_PATTERN.sub("", value).strip()
         if new_value == value:
             break
         value = new_value
-    value = value.split("/")[0].split("?")[0].strip()
-    return value
+
+    value = value.split("/")[0].split("?")[0].split("#")[0].strip()
+    return value.strip("@")
 
 
 def _headers():

@@ -4,6 +4,16 @@ const BASE_URL = import.meta.env.VITE_API_URL || "";
 const TOKEN_KEY = "skilldna_token";
 const USER_KEY = "skilldna_user";
 
+export function normalizeGithubInput(value) {
+  const raw = (value || "").trim();
+  if (!raw) return "";
+
+  const withoutAt = raw.replace(/^@/, "");
+  const withoutProtocol = withoutAt.replace(/^https?:\/\/(?:www\.)?github\.com\//i, "");
+  const withoutDomain = withoutProtocol.replace(/^github\.com\//i, "");
+  return withoutDomain.split(/[/?#]/)[0].trim();
+}
+
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -80,10 +90,16 @@ export const api = {
     return request(`/resume/upload/${userId}`, { method: "POST", body: form });
   },
 
-  analyzeGithub: (userId, username) =>
-    request(`/github/analyze/${userId}?username=${encodeURIComponent(username)}`, {
+  analyzeGithub: (userId, username) => {
+    const normalized = normalizeGithubInput(username);
+    if (!normalized) {
+      throw new Error("Enter a GitHub username or URL first.");
+    }
+
+    return request(`/github/analyze/${userId}?username=${encodeURIComponent(normalized)}`, {
       method: "POST",
-    }),
+    });
+  },
 
   uploadLinkedin: (userId, file) => {
     const form = new FormData();
