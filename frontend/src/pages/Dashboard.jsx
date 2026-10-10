@@ -22,15 +22,18 @@ export default function Dashboard() {
   const [report, setReport] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [apiOffline, setApiOffline] = useState(false);
+  const [reportError, setReportError] = useState(null);
 
   const refreshReport = useCallback(async (userId) => {
     setReportLoading(true);
+    setApiOffline(false);
+    setReportError(null);
     try {
       const r = await api.getReport(userId);
       setReport(r);
-      setApiOffline(false);
-    } catch {
-      setApiOffline(true);
+    } catch (error) {
+      setApiOffline(error instanceof TypeError);
+      setReportError(error.message || "Could not load your SkillDNA report.");
     } finally {
       setReportLoading(false);
     }
@@ -69,12 +72,21 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {apiOffline && (
+      {reportError && (
         <div className="bg-signal-coral-soft border-b border-signal-coral/30">
-          <div className="max-w-6xl mx-auto px-6 md:px-10 py-3 font-mono text-xs text-ink">
-            Backend not reachable at the configured API URL. Start it with{" "}
-            <code className="bg-white px-1.5 py-0.5 rounded">uvicorn app.main:app --reload</code> in{" "}
-            <code className="bg-white px-1.5 py-0.5 rounded">backend/</code>.
+          <div className="max-w-6xl mx-auto px-6 md:px-10 py-3 flex flex-wrap items-center justify-between gap-3 font-mono text-xs text-ink" role="alert">
+            <p>
+              {apiOffline
+                ? "Backend not reachable at the configured API URL. Start it with uvicorn app.main:app --reload in backend/."
+                : `Could not load your SkillDNA report: ${reportError}`}
+            </p>
+            <button
+              onClick={() => user && refreshReport(user.id)}
+              disabled={reportLoading}
+              className="underline underline-offset-4 disabled:opacity-50"
+            >
+              {reportLoading ? "Retrying…" : "Retry"}
+            </button>
           </div>
         </div>
       )}
