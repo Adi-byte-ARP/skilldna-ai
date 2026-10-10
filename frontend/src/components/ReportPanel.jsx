@@ -195,8 +195,6 @@ export default function ReportPanel({ report, loading }) {
   }
 
   if (!report || report.all_scores.length === 0) {
-    /* show empty source cards so user sees what's possible */
-    const emptySrc = Object.fromEntries(SOURCE_ORDER.map((k) => [k, 0]));
     return (
       <div className="space-y-8">
         <div className="rounded-2xl border border-dashed border-line p-6">
@@ -214,7 +212,7 @@ export default function ReportPanel({ report, loading }) {
         {/* source breakdown — all zeroed */}
         <div>
           <p className="font-mono text-xs uppercase tracking-widest text-ink-soft mb-3">
-            Score breakdown — each source worth 25 pts
+            Score breakdown — weighted by evidence source
           </p>
           <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
             {SOURCE_ORDER.map((k, i) => (
