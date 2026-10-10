@@ -16,6 +16,16 @@ Aggregation rule (deliberately simple and explainable, not a black box):
     "noisy-OR" so 2-3 medium-confidence sources compound meaningfully
 """
 from collections import defaultdict
+
+# Each source contributes a weighted share toward the 100-point total.
+SOURCE_KEYS = ["resume", "github", "linkedin", "certificate"]
+SOURCE_WEIGHTS = {
+    "resume": 30.0,
+    "github": 30.0,
+    "linkedin": 25.0,
+    "certificate": 15.0,
+}
+SOURCE_MAX = sum(SOURCE_WEIGHTS.values())
 from sqlalchemy.orm import Session
 from app.models.db_models import Submission, ExtractedSkill, SkillScore
 
@@ -136,14 +146,43 @@ def _tier_for_score(score: float) -> str:
     return "Early-stage"
 
 
+def _source_scores(scores: list) -> dict:
+    """Compute per-source contribution scores using fixed source weights.
+
+    Algorithm:
+      - Collect all skill scores that include a given source.
+      - Average those scores (0-100 scale).
+      - Convert that average into a weighted contribution using the
+        configured weight for that source.
+    If a source has no skills, its contribution is 0.
+    The four source scores sum to the overall score (max 100).
+    """
+    source_skill_scores: dict[str, list[float]] = {k: [] for k in SOURCE_KEYS}
+    for skill in scores:
+        for src in (skill.sources or []):
+            if src in source_skill_scores:
+                source_skill_scores[src].append(skill.score)
+
+    result = {}
+    for src in SOURCE_KEYS:
+        vals = source_skill_scores[src]
+        avg = (sum(vals) / len(vals)) if vals else 0.0
+        weighted_score = avg * SOURCE_WEIGHTS[src] / 100.0
+        result[src] = round(min(weighted_score, SOURCE_WEIGHTS[src]), 1)
+    return result
+
+
 def build_report(db: Session, user_id: int) -> dict:
     scores = compute_scores_for_user(db, user_id)
+
+    empty_source_scores = {k: 0.0 for k in SOURCE_KEYS}
 
     if not scores:
         return {
             "user_id": user_id,
             "overall_score": 0.0,
             "tier": "No data yet",
+            "source_scores": empty_source_scores,
             "strengths": [],
             "gaps": [],
             "all_scores": [],
@@ -153,7 +192,9 @@ def build_report(db: Session, user_id: int) -> dict:
             ],
         }
 
-    overall_score = round(sum(s.score for s in scores) / len(scores), 1)
+    src_scores = _source_scores(scores)
+    overall_score = round(sum(src_scores.values()), 1)
+
     sorted_scores = sorted(scores, key=lambda s: s.score, reverse=True)
     strengths = sorted_scores[:5]
     gaps = [s for s in sorted_scores if s.score < 60][-5:]
@@ -165,6 +206,7 @@ def build_report(db: Session, user_id: int) -> dict:
         "user_id": user_id,
         "overall_score": overall_score,
         "tier": _tier_for_score(overall_score),
+        "source_scores": src_scores,
         "strengths": strengths,
         "gaps": gaps,
         "all_scores": sorted_scores,

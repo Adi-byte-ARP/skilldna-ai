@@ -102,3 +102,51 @@ def test_full_pipeline_with_db(tmp_path):
     print(f"Recommendations: {report['recommendations']}")
 
     db.close()
+
+
+def test_weighted_source_scores_total_to_100():
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(bind=engine)
+    Session = sessionmaker(bind=engine)
+    db = Session()
+
+    user = User(name="Weighted User", email="weighted@example.com")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    source_map = {
+        "resume": 100.0,
+        "github": 100.0,
+        "linkedin": 100.0,
+        "certificate": 100.0,
+    }
+
+    for source_type, score in source_map.items():
+        submission = Submission(
+            user_id=user.id,
+            source_type=source_type,
+            original_filename=f"{source_type}.pdf",
+            status="processed",
+        )
+        db.add(submission)
+        db.commit()
+        db.refresh(submission)
+
+        db.add(ExtractedSkill(
+            submission_id=submission.id,
+            skill_name=f"{source_type} skill",
+            category="Programming Language",
+            confidence=score / 100,
+            evidence=f"Evidence from {source_type}",
+        ))
+        db.commit()
+
+    report = build_report(db, user.id)
+    assert report["source_scores"]["resume"] == 30.0
+    assert report["source_scores"]["github"] == 30.0
+    assert report["source_scores"]["linkedin"] == 25.0
+    assert report["source_scores"]["certificate"] == 15.0
+    assert report["overall_score"] == 100.0
+
+    db.close()

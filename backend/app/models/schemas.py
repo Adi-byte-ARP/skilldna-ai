@@ -70,6 +70,7 @@ class SkillDNAReport(BaseModel):
     user_id: int
     overall_score: float
     tier: str
+    source_scores: dict[str, float] = {}
     strengths: list[SkillScoreOut]
     gaps: list[SkillScoreOut]
     all_scores: list[SkillScoreOut]

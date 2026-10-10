@@ -8,5 +8,13 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    proxy: {
+      '/auth': 'http://localhost:8000',
+      '/users': 'http://localhost:8000',
+      '/resume': 'http://localhost:8000',
+      '/github': 'http://localhost:8000',
+      '/ocr': 'http://localhost:8000',
+      '/report': 'http://localhost:8000',
+    },
   },
 })
