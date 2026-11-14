@@ -75,6 +75,11 @@ SKILLS_TAXONOMY = {
 }
 
 
+# Extended skills (certificates, security, cloud, design, product). See skills_taxonomy_extra.py.
+from app.utils.skills_taxonomy_extra import EXTRA_SKILLS  # noqa: E402
+SKILLS_TAXONOMY.update(EXTRA_SKILLS)
+
+
 def build_alias_lookup() -> dict[str, str]:
     """Map every alias (and the canonical name itself) -> canonical skill name."""
     lookup = {}

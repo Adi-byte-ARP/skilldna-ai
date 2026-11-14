@@ -12,6 +12,7 @@ venv/
 
 # Uploads and generated files
 backend/uploads/
+backend/*.db
 
 # Environment files
 frontend/.env
@@ -22,3 +23,6 @@ frontend/.env
 
 # Editor
 .vscode/
+e2e/node_modules/
+frontend/node_modules/
+backend/uploads/*

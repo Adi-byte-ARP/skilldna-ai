@@ -14,6 +14,18 @@ export function normalizeGithubInput(value) {
   return withoutDomain.split(/[/?#]/)[0].trim();
 }
 
+// The roles list never changes during a visit, so every page shares one request for it.
+let rolesRequest = null;
+function cachedRoles() {
+  if (!rolesRequest) {
+    rolesRequest = request("/mock/roles").catch((e) => {
+      rolesRequest = null; // try again next time if it failed
+      throw e;
+    });
+  }
+  return rolesRequest;
+}
+
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -24,6 +36,13 @@ async function request(path, options = {}) {
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  // A 401 on a request that carried a token means the sign-in has expired. End the session cleanly
+  // so the user is sent to sign in, rather than being left on pages that cannot load.
+  if (res.status === 401 && token) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("skilldna_user");
+    window.dispatchEvent(new Event("skilldna:session-expired"));
+  }
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -114,6 +133,120 @@ export const api = {
   },
 
   getReport: (userId) => request(`/report/${userId}`),
+
+  mockRoles: () => cachedRoles(),
+  mockStart: (kind, role) =>
+    request("/mock/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, role }),
+    }),
+  mockGet: (id) => request(`/mock/sessions/${id}`),
+  mockEvent: (id, type) =>
+    request(`/mock/sessions/${id}/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type }),
+    }),
+  mockAnswer: (id, questionId, answer) =>
+    request(`/mock/sessions/${id}/answers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question_id: questionId, answer }),
+    }),
+  mockSubmit: (id) => request(`/mock/sessions/${id}/submit`, { method: "POST" }),
+  mockSessions: () => request("/mock/sessions"),
+
+  planGet: (role, mode = "gap") => request(`/plan?role=${encodeURIComponent(role)}&mode=${mode}`),
+  planToggleTask: (taskKey, done, role, mode = "gap") =>
+    request(`/plan/tasks/${encodeURIComponent(taskKey)}?role=${encodeURIComponent(role)}&mode=${mode}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ done }),
+    }),
+  interviewStart: (role) =>
+    request("/interview/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    }),
+  interviewAnswer: (sessionId, answer, secondsSpent) =>
+    request(`/interview/sessions/${sessionId}/answer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answer, seconds_spent: secondsSpent ?? null }),
+    }),
+  interviewList: () => request("/interview/sessions"),
+  assistantChat: (message, history) =>
+    request("/assistant/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, history }),
+    }),
+  profileGet: () => request("/profile"),
+  profileSetTargetRole: (role) =>
+    request("/profile/target-role", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    }),
+  profileSettings: (assistantContext) =>
+    request("/profile/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assistant_context: assistantContext }),
+    }),
+  profileRecommendations: () => request("/profile/recommendations"),
+  // A file download, so it is not parsed as JSON. Uses the same token and base URL as everything else.
+  profileExport: async () => {
+    const token = getToken();
+    const res = await fetch(`${BASE_URL}/profile/export`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!res.ok) throw new Error("Could not export your data.");
+    return res.blob();
+  },
+  assistantAction: (action) =>
+    request("/assistant/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    }),
+  interviewEvent: (sessionId, type) =>
+    request(`/interview/sessions/${sessionId}/event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type }),
+    }),
+  planPhaseTest: (index, role, mode = "gap") => request(`/plan/phases/${index}/test?role=${encodeURIComponent(role)}&mode=${mode}`),
+  planPhaseSubmit: (index, role, answers, mode = "gap") =>
+    request(`/plan/phases/${index}/test?role=${encodeURIComponent(role)}&mode=${mode}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answers }),
+    }),
+  dailyToday: (role, localHour) =>
+    request(`/daily/today?role=${encodeURIComponent(role)}${localHour == null ? "" : `&local_hour=${localHour}`}`),
+  planHistory: () => request("/plan/history"),
+  dailyAnswer: (challengeId, answerIndex, role, answerText) =>
+    request("/daily/answer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        challenge_id: challengeId,
+        answer_index: answerIndex ?? null,
+        answer_text: answerText ?? null,
+        role,
+      }),
+    }),
+  dailyHistory: () => request("/daily/history"),
+  dailyStatus: (localHour) =>
+    request(`/daily/status?local_hour=${encodeURIComponent(localHour)}`),
+  remindersGet: () => request("/reminders/settings"),
+  remindersSet: (emailOptIn) =>
+    request("/reminders/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email_opt_in: emailOptIn }),
+    }),
 };
 
 export { BASE_URL };

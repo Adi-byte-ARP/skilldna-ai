@@ -53,8 +53,10 @@ def compute_scores_for_user(db: Session, user_id: int) -> list[SkillScore]:
             evidence_map[skill.skill_name].append((skill.confidence, sub.source_type))
             category_map[skill.skill_name] = skill.category
 
-    # clear old scores and recompute fresh (simplest correct approach for a v1)
-    db.query(SkillScore).filter(SkillScore.user_id == user_id).delete()
+    # Pure computation. Report reads must never write: the old version deleted and
+    # re-inserted this user's rows on every GET, and concurrent reads raced on it
+    # ("Could not refresh instance" -> HTTP 500 under load). Nothing reads the
+    # stored SkillScore rows, so they are no longer persisted.
 
     new_scores = []
     for skill_name, evidence in evidence_map.items():
@@ -71,9 +73,6 @@ def compute_scores_for_user(db: Session, user_id: int) -> list[SkillScore]:
         db.add(skill_score)
         new_scores.append(skill_score)
 
-    db.commit()
-    for s in new_scores:
-        db.refresh(s)
     return new_scores
 
 

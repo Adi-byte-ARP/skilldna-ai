@@ -19,13 +19,14 @@ class UserOut(BaseModel):
 
 
 class RegisterRequest(BaseModel):
+    # Validated in the route, so the message the user sees is ours and specific.
     name: str
-    email: EmailStr
+    email: str
     password: str
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
@@ -50,6 +51,7 @@ class SubmissionOut(BaseModel):
     original_filename: Optional[str] = None
     status: str
     error_message: Optional[str] = None
+    detected_name: Optional[str] = None
     extracted_skills: list[ExtractedSkillOut] = []
 
     class Config:

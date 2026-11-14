@@ -5,12 +5,13 @@ load_dotenv()  # must run before app.database / app.utils.security / app.service
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import Base, engine
-from app.routers import users, resume, github, ocr_uploads, report, auth
+from app.database import Base, engine, ensure_columns
+from app.routers import users, resume, github, ocr_uploads, report, auth, mock, plan, daily, reminders, interview, assistant, profile
 
 # create tables on startup (fine for SQLite/dev; use Alembic migrations
 # once you move to Postgres for anything beyond local dev)
 Base.metadata.create_all(bind=engine)
+ensure_columns()
 
 app = FastAPI(
     title="SkillDNA AI",
@@ -38,8 +39,20 @@ app.include_router(resume.router)
 app.include_router(github.router)
 app.include_router(ocr_uploads.router)
 app.include_router(report.router)
+app.include_router(mock.router)
+app.include_router(plan.router)
+app.include_router(daily.router)
+app.include_router(reminders.router)
+app.include_router(interview.router)
+app.include_router(assistant.router)
+app.include_router(profile.router)
 
 
 @app.get("/")
 def root():
     return {"status": "ok", "service": "SkillDNA AI backend"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}

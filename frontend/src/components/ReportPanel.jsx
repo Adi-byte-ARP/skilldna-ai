@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, animate } from "framer-motion";
+import { gsap, prefersReducedMotion } from "../lib/motion";
 import {
   BarChart,
   Bar,
@@ -10,26 +11,43 @@ import {
   Cell,
 } from "recharts";
 import Helix from "./Helix";
+import Icon from "../ui/Icon";
 
-/* ── animated counter ─────────────────────────────────────────────── */
+/* ── animated counter (GSAP) ────────────────────────────────────────
+ * Counts from 0 to the value on first render. Later changes count from the current number.
+ * Reduced motion: the final value is shown straight away. */
 function CountUp({ value, decimals = 1 }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    const ctrl = animate(0, value, {
+  const ref = useRef(null);
+  const shown = useRef(0);
+  useLayoutEffect(() => {
+    const format = (n) => (decimals === 0 ? Math.round(n) : n.toFixed(decimals));
+    const el = ref.current;
+    if (!el) return undefined;
+    if (prefersReducedMotion()) {
+      shown.current = value;
+      el.textContent = format(value);
+      return undefined;
+    }
+    const obj = { val: shown.current };
+    const tween = gsap.to(obj, {
+      val: value,
       duration: 1.2,
-      ease: [0.16, 1, 0.3, 1],
-      onUpdate: (v) => setDisplay(v),
+      ease: "power3.out",
+      onUpdate: () => {
+        shown.current = obj.val;
+        el.textContent = format(obj.val);
+      },
     });
-    return () => ctrl.stop();
-  }, [value]);
-  return <>{decimals === 0 ? Math.round(display) : display.toFixed(decimals)}</>;
+    return () => tween.kill();
+  }, [value, decimals]);
+  return <span ref={ref}>{decimals === 0 ? Math.round(0) : (0).toFixed(decimals)}</span>;
 }
 
 /* ── colour tokens per source ─────────────────────────────────────── */
 const SOURCE_META = {
   resume: {
     label: "Resume",
-    icon: "📄",
+    icon: <Icon name="document" className="h-4 w-4" />,
     color: "#0F9E8E",          // helix-teal
     bg: "bg-[#0F9E8E]/10",
     border: "border-[#0F9E8E]/30",
@@ -38,7 +56,7 @@ const SOURCE_META = {
   },
   github: {
     label: "GitHub",
-    icon: "💻",
+    icon: <Icon name="code" className="h-4 w-4" />,
     color: "#6C5CE0",
     bg: "bg-[#6C5CE0]/10",
     border: "border-[#6C5CE0]/30",
@@ -47,7 +65,7 @@ const SOURCE_META = {
   },
   linkedin: {
     label: "LinkedIn",
-    icon: "🔗",
+    icon: <Icon name="link" className="h-4 w-4" />,
     color: "#2D8FD1",
     bg: "bg-[#2D8FD1]/10",
     border: "border-[#2D8FD1]/30",
@@ -56,7 +74,7 @@ const SOURCE_META = {
   },
   certificate: {
     label: "Certificate",
-    icon: "🎓",
+    icon: <Icon name="certificate" className="h-4 w-4" />,
     color: "#E8A93C",
     bg: "bg-[#E8A93C]/10",
     border: "border-[#E8A93C]/30",
@@ -122,12 +140,12 @@ function SourceCard({ sourceKey, earned, index }) {
       className={`rounded-2xl border ${meta.border} ${meta.bg} p-4 flex flex-col gap-3`}
     >
       {/* header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-1.5">
         <div className="flex items-center gap-2">
-          <span className="text-xl">{meta.icon}</span>
+          <span className="text-xl shrink-0">{meta.icon}</span>
           <span className="font-display font-medium text-sm">{meta.label}</span>
         </div>
-        <span className={`font-mono text-[10px] px-2 py-0.5 rounded-full border ${meta.border} ${meta.text}`}>
+        <span className={`whitespace-nowrap font-mono text-[10px] px-2 py-0.5 rounded-full border ${meta.border} ${meta.text}`}>
           {status}
         </span>
       </div>

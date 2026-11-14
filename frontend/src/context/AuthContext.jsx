@@ -46,6 +46,13 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  // Any request that finds the sign-in expired ends the session everywhere at once.
+  useEffect(() => {
+    const expired = () => setUser(null);
+    window.addEventListener("skilldna:session-expired", expired);
+    return () => window.removeEventListener("skilldna:session-expired", expired);
+  }, []);
+
   return (
     <AuthContext.Provider value={{ user, checking, login, register, logout }}>
       {children}

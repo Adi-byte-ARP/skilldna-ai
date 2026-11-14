@@ -62,48 +62,85 @@ def _find_skill_mentions(text: str, alias: str) -> list[str]:
     return [m.strip() for m in pattern.findall(text)]
 
 
+ACTION_VERBS = re.compile(
+    r"\b(built|developed|designed|implemented|deployed|created|led|architected|shipped|engineered|"
+    r"optimi[sz]ed|automated|trained|analy[sz]ed|maintained|migrated|integrated|launched|delivered)\b",
+    re.IGNORECASE,
+)
+SKILLS_LINE = re.compile(r"^\s*(technical\s+)?skills\b|\b(languages|frameworks|tools|technologies)\s*:", re.IGNORECASE)
+
+
+def confidence_from_evidence(lines: list[str], years_text: str) -> tuple[float, str]:
+    """Confidence from HOW a skill is used in the resume, not just that it appears.
+
+    A resume alone is a claim, so the range is deliberately narrow: 0.40 to 0.58.
+    That keeps every resume-only skill below 60 ("claimed until verified") while still
+    letting well-used skills rank above passing mentions:
+      - base 0.40 for any mention
+      - in a skills list                 +0.04
+      - next to an action verb           +0.06   (built, deployed, developed...)
+      - a depth word (expert, certified) +0.04
+      - each extra line that mentions it +0.02 (max +0.04)
+      - years of experience near it      +0.01 per year (max +0.03)
+    """
+    score = 0.40
+    lines_hit = len(lines)
+    if any(SKILLS_LINE.search(line) for line in lines):
+        score += 0.04
+    if any(ACTION_VERBS.search(line) for line in lines):
+        score += 0.06
+    if any(sig in " ".join(lines) for sig in STRONG_SIGNAL_WORDS):
+        score += 0.04
+    score += min(max(lines_hit - 1, 0), 2) * 0.02
+    years_match = YEARS_PATTERN.search(years_text)
+    if years_match:
+        score += min(int(years_match.group(1)), 3) * 0.01
+    return min(score, 0.58), " / ".join(lines[:2])
+
+
+def _aliases_by_skill() -> dict[str, list[str]]:
+    grouped: dict[str, list[str]] = {}
+    for alias, canonical in ALIAS_LOOKUP.items():
+        grouped.setdefault(canonical, []).append(alias)
+    return grouped
+
+
+_ALIASES = None
+
+
 def extract_skills_from_text(text: str) -> list[dict]:
     """
-    Match taxonomy skills/aliases against resume text.
+    Match taxonomy skills against resume text.
     Returns a list of dicts: skill_name, category, confidence, evidence.
+
+    All aliases of a skill are searched together, so "Git" in a skills list and
+    "version control" in a sentence are both evidence for the same skill.
+    Confidence reflects how the skill is used (see confidence_from_evidence).
     """
+    global _ALIASES
     if not text:
         return []
+    if _ALIASES is None:
+        _ALIASES = _aliases_by_skill()
 
     text_lower = text.lower()
+    lines = [line.strip() for line in text_lower.splitlines() if line.strip()]
     results = []
-    seen_canonical = set()
-
-    # Check longer aliases before shorter ones so a compound match like
-    # "react.js" (-> react) is found on its own terms rather than only
-    # ever being reached through the ambiguous bare "js" alias.
-    for alias, canonical in sorted(ALIAS_LOOKUP.items(), key=lambda kv: -len(kv[0])):
-        if canonical in seen_canonical:
-            continue
-        pattern = _pattern_for_alias(alias)
-        if not pattern.search(text_lower):
-            continue
-
-        mentions = _find_skill_mentions(text_lower, alias)
-        evidence = mentions[0] if mentions else None
-
-        confidence = 0.55  # base confidence for a plain mention
-        combined_evidence = " ".join(mentions)
-        if any(sig in combined_evidence for sig in STRONG_SIGNAL_WORDS):
-            confidence = 0.85
-        years_match = YEARS_PATTERN.search(combined_evidence)
-        if years_match:
-            years = int(years_match.group(1))
-            confidence = min(0.95, confidence + min(years, 5) * 0.03)
-
+    for canonical, aliases in _ALIASES.items():
+        patterns = [_pattern_for_alias(a) for a in aliases]
+        mention_lines = [line for line in lines if any(p.search(line) for p in patterns)]
+        if not mention_lines:
+            if not any(p.search(text_lower) for p in patterns):
+                continue
+            mention_lines = [m for a in aliases for m in _find_skill_mentions(text_lower, a)][:5]
+        years_text = " ".join(mention_lines)
+        confidence, evidence = confidence_from_evidence(mention_lines, years_text)
         results.append({
             "skill_name": canonical,
             "category": SKILLS_TAXONOMY[canonical]["category"],
             "confidence": round(confidence, 2),
-            "evidence": evidence,
+            "evidence": evidence or None,
         })
-        seen_canonical.add(canonical)
-
     return results
 
 

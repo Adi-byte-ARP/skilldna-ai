@@ -3,7 +3,7 @@ __pycache__/
 venv/
 .venv/
 .env
-skilldna.db
+*.db
 uploads/*
 !uploads/.gitkeep
 .pytest_cache/

@@ -1,21 +1,15 @@
-import { useMemo, useRef, useLayoutEffect } from "react";
-import { gsap } from "../lib/gsapSetup";
+import { useMemo, useRef } from "react";
+import { useGsap } from "../lib/motion";
 
 /**
- * Ambient background: a sparse network of "evidence nodes" connected by thin
- * lines, pulsing and slowly drifting. Deliberately extends the same visual
- * language already used in Helix.jsx (nodePulse/rungSpark keyframes) rather
- * than introducing a new style -- this should read as part of the same
- * design system, not a bolted-on decoration.
+ * Ambient background: a sparse network of "evidence nodes" joined by thin lines.
+ * Nodes pulse in a random stagger, the lines carry a slow dash flow, and the whole
+ * field drifts a little as the page scrolls. All of it is GSAP.
  *
- * Deterministic (seeded), not Math.random() on every render, so the layout
- * doesn't jitter between renders/reloads. Pure CSS keyframe animation for
- * the pulse/drift, so it's covered for free by the app's existing
- * `prefers-reduced-motion` rule in index.css -- only the initial GSAP
- * fade-in needs its own explicit check.
+ * Deterministic (seeded): the layout is the same on every render and reload.
  */
 
-// Tiny seeded PRNG (mulberry32) so the "organic" jitter is stable across renders.
+// Tiny seeded PRNG (mulberry32) so the layout is stable.
 function seededRandom(seed) {
   return function () {
     seed |= 0;
@@ -38,57 +32,62 @@ function generateField({ cols, rows, seed, jitter = 0.38 }) {
         x: baseX + (rand() - 0.5) * jitter * (100 / cols),
         y: baseY + (rand() - 0.5) * jitter * (100 / rows),
         verified: rand() > 0.62,
-        delay: rand() * 3,
       });
     }
   }
 
-  // Connect each node to its grid-neighbor to the right and below, but only
-  // keep a subset so the network reads as sparse/organic, not a rigid mesh.
+  // Sparse links to right and down neighbours, so it reads as a network, not a grid.
   const lines = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const idx = r * cols + c;
-      const keep = rand() > 0.55;
-      if (!keep) continue;
+      if (rand() <= 0.55) continue;
       if (c < cols - 1) lines.push([nodes[idx], nodes[idx + 1]]);
       if (r < rows - 1 && rand() > 0.5) lines.push([nodes[idx], nodes[idx + cols]]);
     }
   }
-
   return { nodes, lines };
 }
 
 export default function SequenceBackground({ seed = 7, cols = 11, rows = 6, className = "" }) {
-  const rootRef = useRef(null);
+  const scope = useRef(null);
   const { nodes, lines } = useMemo(() => generateField({ cols, rows, seed }), [cols, rows, seed]);
 
-  useLayoutEffect(() => {
-    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced) {
-      gsap.set(rootRef.current, { opacity: 1 });
-      return;
-    }
-    const ctx = gsap.context(() => {
-      gsap.from(rootRef.current, { opacity: 0, duration: 1.6, ease: "power2.out" });
-    }, rootRef);
-    return () => ctx.revert();
-  }, []);
+  useGsap(scope, ({ reduce, gsap }) => {
+    if (reduce) return undefined;
+    const dots = gsap.utils.toArray("[data-node]", scope.current);
+    const links = gsap.utils.toArray("[data-link]", scope.current);
+
+    // Nodes breathe in a random order, like signal arriving at different points.
+    gsap.to(dots, {
+      scale: 1.5,
+      transformOrigin: "50% 50%",
+      duration: 2.8,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut",
+      stagger: { each: 0.14, from: "random", repeat: -1 },
+    });
+
+    // The dash pattern is 1.2 on, 1.6 off (period 2.8), so offsetting by one period loops seamlessly.
+    gsap.to(links, { strokeDashoffset: -2.8, duration: 5, repeat: -1, ease: "none" });
+
+    // The field drifts slower than the page, which adds depth.
+    gsap.to(scope.current, {
+      y: () => -window.innerHeight * 0.12,
+      ease: "none",
+      scrollTrigger: { trigger: scope.current.parentElement, start: "top bottom", end: "bottom top", scrub: 0.6 },
+    });
+    return undefined;
+  });
 
   return (
-    <div
-      ref={rootRef}
-      aria-hidden="true"
-      className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
-    >
-      <svg
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        className="w-full h-full"
-      >
+    <div ref={scope} aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
         {lines.map(([a, b], i) => (
           <line
             key={i}
+            data-link
             x1={a.x}
             y1={a.y}
             x2={b.x}
@@ -97,24 +96,17 @@ export default function SequenceBackground({ seed = 7, cols = 11, rows = 6, clas
             strokeOpacity={0.05}
             strokeWidth="0.12"
             strokeDasharray="1.2 1.6"
-            style={{
-              animation: `flowDash ${14 + (i % 5) * 2}s linear infinite`,
-            }}
           />
         ))}
         {nodes.map((n) => (
           <circle
             key={n.id}
+            data-node
             cx={n.x}
             cy={n.y}
             r={n.verified ? 0.42 : 0.28}
             fill={n.verified ? "var(--color-helix-teal)" : "var(--color-helix-violet)"}
             fillOpacity={n.verified ? 0.35 : 0.2}
-            style={{
-              animation: `nodePulse ${3 + (n.delay % 2)}s ease-in-out ${n.delay}s infinite`,
-              transformOrigin: `${n.x}px ${n.y}px`,
-              transformBox: "fill-box",
-            }}
           />
         ))}
       </svg>

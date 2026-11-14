@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: skilldna-ai-api
+    runtime: docker
+    region: singapore
+    plan: 0.5c-512mb
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    healthCheckPath: /health
+    disk:
+      name: skilldna-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:////app/data/skilldna.db
+      - key: UPLOAD_DIR
+        value: /app/data/uploads
+      - key: SECRET_KEY
+        generateValue: true

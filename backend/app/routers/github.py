@@ -1,3 +1,5 @@
+from app.services.submissions import supersede_previous
+from app.routers.auth import authorize_user
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -9,7 +11,7 @@ router = APIRouter(prefix="/github", tags=["github"])
 
 
 @router.post("/analyze/{user_id}", response_model=SubmissionOut)
-def analyze_github(user_id: int, username: str, db: Session = Depends(get_db)):
+def analyze_github(user_id: int, username: str, db: Session = Depends(get_db), _=Depends(authorize_user)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -29,6 +31,8 @@ def analyze_github(user_id: int, username: str, db: Session = Depends(get_db)):
         skills = extract_skills_from_github(github_data)
         submission.raw_text = f"GitHub user: {username}, {len(github_data['repos'])} repos"
         submission.status = "processed"
+        db.flush()
+        supersede_previous(db, user_id, "github", keep_id=submission.id)
         for skill in skills:
             db.add(ExtractedSkill(
                 submission_id=submission.id,

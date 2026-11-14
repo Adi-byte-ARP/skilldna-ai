@@ -18,16 +18,28 @@ export default function UploadCard({
   textPlaceholder,
 }) {
   const [status, setStatus] = useState("idle");
+  const [fileResults, setFileResults] = useState([]);
   const [message, setMessage] = useState(null);
   const [textValue, setTextValue] = useState("");
   const inputRef = useRef(null);
 
+  // Only a processed file counts. Name mismatches and unreadable files are reported with the reason.
   const summarizeOne = (result) => {
-    if (result?.status === "failed") {
-      return { ok: false, text: result.error_message || "Couldn't process this file." };
+    const name = result?.original_filename || "file";
+    if (result?.status === "processed") {
+      const count = result?.extracted_skills?.length ?? 0;
+      return { name, ok: true, text: `Found ${count} skill${count === 1 ? "" : "s"}.` };
     }
-    const count = result?.extracted_skills?.length ?? 0;
-    return { ok: true, text: `Found ${count} skill${count === 1 ? "" : "s"}.` };
+    const reasons = {
+      name_mismatch: "Name does not match your account, so it was not counted.",
+      name_unverified: "No name found on this file, so it was not counted.",
+    };
+    return {
+      name,
+      ok: false,
+      text: result?.error_message || reasons[result?.status] || "Couldn't process this file.",
+      detail: result?.error_message,
+    };
   };
 
   const handleFile = async (file) => {
@@ -48,11 +60,13 @@ export default function UploadCard({
   const handleMultiFile = async (fileList) => {
     const files = Array.from(fileList || []);
     if (files.length === 0) return;
+    setFileResults([]);
     setStatus("loading");
     setMessage(null);
     try {
       const results = await onSubmit(files);
       const summaries = results.map(summarizeOne);
+      setFileResults(summaries);
       const failedCount = summaries.filter((s) => !s.ok).length;
       const totalSkills = results.reduce((sum, r) => sum + (r?.extracted_skills?.length ?? 0), 0);
 
@@ -100,7 +114,11 @@ export default function UploadCard({
             type="file"
             accept={accept}
             className="hidden"
-            onChange={(e) => handleFile(e.target.files?.[0])}
+            onChange={(e) => {
+              const picked = e.target.files?.[0];
+              e.target.value = ""; // so picking the same file again still fires a change and gets its answer
+              handleFile(picked);
+            }}
           />
           <button
             onClick={() => inputRef.current?.click()}
@@ -120,7 +138,11 @@ export default function UploadCard({
             accept={accept}
             multiple
             className="hidden"
-            onChange={(e) => handleMultiFile(e.target.files)}
+            onChange={(e) => {
+              const picked = e.target.files;
+              handleMultiFile(picked);
+              e.target.value = ""; // so choosing the same files again still triggers a scan
+            }}
           />
           <button
             onClick={() => inputRef.current?.click()}
@@ -130,18 +152,31 @@ export default function UploadCard({
             {status === "loading" ? "Reading…" : buttonLabel}
           </button>
           <p className="mt-1.5 text-[11px] text-ink-soft font-mono">You can select more than one file</p>
+          {fileResults.length > 0 && (
+            <ul className="mt-3 space-y-1.5 text-xs" aria-label="Results per file">
+              {fileResults.map((r, i) => (
+                <li key={`${r.name}-${i}`} className="flex gap-2">
+                  <span className={r.ok ? "text-helix-teal" : "text-signal-coral"} aria-hidden="true">{r.ok ? "✓" : "✕"}</span>
+                  <span>
+                    <span className="font-medium">{r.name}</span>
+                    <span className="text-ink-soft"> — {r.text}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       )}
 
       {mode === "text" && (
-        <div className="flex gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <input
             type="text"
             value={textValue}
             onChange={(e) => setTextValue(e.target.value)}
             placeholder={textPlaceholder}
             onKeyDown={(e) => e.key === "Enter" && handleTextSubmit()}
-            className="flex-1 rounded-full border border-line px-4 py-2 text-sm font-mono focus:outline-none focus:border-helix-teal bg-white"
+            className="min-w-0 flex-1 rounded-full border border-line bg-surface px-4 py-2 text-sm font-mono focus:outline-none focus:border-helix-teal"
           />
           <button
             onClick={handleTextSubmit}

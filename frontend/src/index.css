@@ -1,9 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
+/* Design tokens. Utilities (bg-paper, text-ink, ...) read these variables, so a theme only
+   has to redefine them. Light is the default; data-theme="dark" swaps the whole palette. */
 @theme {
   --color-paper: #F6F7F4;
   --color-paper-dim: #ECEEE8;
+  --color-surface: #FFFFFF;
   --color-ink: #10151A;
   --color-ink-soft: #4A5158;
   --color-line: #D8DBD3;
@@ -18,6 +21,36 @@
   --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'Inter', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: #0D1117;
+  --color-paper-dim: #151B23;
+  --color-surface: #161C25;
+  --color-ink: #E6EAF0;
+  --color-ink-soft: #97A2B1;
+  --color-line: #2A313C;
+  --color-helix-teal: #3CCFB4;
+  --color-helix-teal-soft: #15393A;
+  --color-helix-violet: #9C8EFF;
+  --color-helix-violet-soft: #272552;
+  --color-signal-coral: #FF8270;
+  --color-signal-coral-soft: #3B2120;
+}
+
+body[data-focus-mode] .helpbot {
+  display: none;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Only while the user switches theme: colours glide instead of snapping. */
+html.theme-transition,
+html.theme-transition * {
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease !important;
 }
 
 * {
@@ -77,3 +110,9 @@ body {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-10px); }
 }
+
+/* Professional base */
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+::selection { background: color-mix(in srgb, var(--color-helix-teal) 28%, transparent); }
+:focus-visible { outline: 2px solid var(--color-helix-teal); outline-offset: 2px; border-radius: 6px; }
+button, a { -webkit-tap-highlight-color: transparent; }

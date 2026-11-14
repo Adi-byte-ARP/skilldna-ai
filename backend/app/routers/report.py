@@ -1,3 +1,4 @@
+from app.routers.auth import authorize_user
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -9,7 +10,7 @@ router = APIRouter(prefix="/report", tags=["report"])
 
 
 @router.get("/{user_id}", response_model=SkillDNAReport)
-def get_skilldna_report(user_id: int, db: Session = Depends(get_db)):
+def get_skilldna_report(user_id: int, db: Session = Depends(get_db), _=Depends(authorize_user)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
