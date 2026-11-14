@@ -1,4 +1,4 @@
-// In dev, Vite proxies /auth /users /resume etc. to localhost:8000 (see vite.config.js).
+// In dev, Vite proxies API routes to the backend (see vite.config.js).
 // In production, set VITE_API_URL to your deployed backend URL.
 const BASE_URL = import.meta.env.VITE_API_URL || "";
 const TOKEN_KEY = "skilldna_token";
